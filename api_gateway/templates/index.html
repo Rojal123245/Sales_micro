@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Automation Microservice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #444;
+            margin-top: 30px;
+        }
+        .endpoint {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .endpoint h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        .method {
+            font-weight: bold;
+            color: #009900;
+        }
+        .url {
+            font-family: monospace;
+            background-color: #eee;
+            padding: 3px 6px;
+            border-radius: 3px;
+        }
+        .description {
+            margin-top: 10px;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sales Automation Microservice</h1>
+    <p>Welcome to the Sales Automation Microservice API. This service provides endpoints for analyzing retail sales data and generating forecasts.</p>
+
+    <h2>Health Check</h2>
+    <div class="endpoint">
+        <h3><span class="method">GET</span> <span class="url">/health</span></h3>
+        <div class="description">Check if the API is running.</div>
+    </div>
+
+    <h2>Data Endpoints</h2>
+    <div class="endpoint">
+        <h3><span class="method">GET</span> <span class="url">/data/load</span></h3>
+        <div class="description">Load data from the configured data source.</div>
+    </div>
+
+    <div class="endpoint">
+        <h3><span class="method">GET</span> <span class="url">/data/process</span></h3>
+        <div class="description">Process data and perform feature engineering.</div>
+    </div>
+
+    <h2>Model Endpoints</h2>
+    <div class="endpoint">
+        <h3><span class="method">POST</span> <span class="url">/model/train</span></h3>
+        <div class="description">Train a sales forecasting model.</div>
+        <p>Example:</p>
+        <code>curl -X POST http://localhost:8080/model/train -H "Content-Type: application/json" -d '{}'</code>
+    </div>
+
+    <div class="endpoint">
+        <h3><span class="method">POST</span> <span class="url">/model/forecast</span></h3>
+        <div class="description">Generate a sales forecast.</div>
+        <p>Parameters:</p>
+        <ul>
+            <li><code>periods</code> (optional): Number of periods to forecast (default: 30)</li>
+            <li><code>start_date</code> (optional): Start date for forecasting (default: current date)</li>
+            <li><code>item_name</code> (optional): Item name for item-specific forecasting</li>
+        </ul>
+        <p>Example:</p>
+        <code>curl -X POST http://localhost:8080/model/forecast -H "Content-Type: application/json" -d '{"periods": 30, "item_name": "Batteries"}'</code>
+    </div>
+
+    <h2>Visualization Endpoints</h2>
+    <div class="endpoint">
+        <h3><span class="method">GET</span> <span class="url">/visualization/sales_trend</span></h3>
+        <div class="description">Generate a sales trend visualization.</div>
+    </div>
+
+    <div class="endpoint">
+        <h3><span class="method">POST</span> <span class="url">/visualization/item_comparison</span></h3>
+        <div class="description">Generate an item comparison visualization.</div>
+        <p>Parameters:</p>
+        <ul>
+            <li><code>items</code>: List of item names to compare</li>
+        </ul>
+        <p>Example:</p>
+        <code>curl -X POST http://localhost:8080/visualization/item_comparison -H "Content-Type: application/json" -d '{"items": ["Batteries", "Soap", "Milk"]}'</code>
+    </div>
+
+    <div class="endpoint">
+        <h3><span class="method">POST</span> <span class="url">/visualization/forecast_plot</span></h3>
+        <div class="description">Generate a forecast visualization.</div>
+        <p>Parameters:</p>
+        <ul>
+            <li><code>periods</code> (optional): Number of periods to forecast (default: 30)</li>
+            <li><code>start_date</code> (optional): Start date for forecasting (default: current date)</li>
+            <li><code>item_name</code> (optional): Item name for item-specific forecasting</li>
+        </ul>
+        <p>Example:</p>
+        <code>curl -X POST http://localhost:8080/visualization/forecast_plot -H "Content-Type: application/json" -d '{"periods": 30, "item_name": "Batteries"}'</code>
+    </div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./output:/app/output
+    environment:
+      - DATA_DIR=/app/data
+      - API_HOST=0.0.0.0
+      - API_PORT=8080
+      - DEBUG_MODE=False

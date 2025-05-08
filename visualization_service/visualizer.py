@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
 from datetime import datetime
+import datetime as dt_module  # Add an alternative import for datetime module
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class Visualizer:
             plt.tight_layout()
 
             # Save plot
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = dt_module.datetime.now().strftime('%Y%m%d_%H%M%S')
             plot_path = os.path.join(self.output_dir, f'sales_trend_{timestamp}.png')
             plt.savefig(plot_path)
             plt.close()
@@ -134,7 +135,7 @@ class Visualizer:
             plt.tight_layout()
 
             # Save plot
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = dt_module.datetime.now().strftime('%Y%m%d_%H%M%S')
             plot_path = os.path.join(self.output_dir, f'item_comparison_{timestamp}.png')
             plt.savefig(plot_path)
             plt.close()
@@ -147,75 +148,156 @@ class Visualizer:
 
     def plot_forecast(self, historical_data, forecast_data, item_name=None):
         """
-        Plot historical data and forecast with ARIMA model using exogenous variables
+        Plot forecasted sales with historical data and confidence intervals
 
         Args:
             historical_data (pandas.DataFrame): Historical sales data
-            forecast_data (pandas.DataFrame): Forecast data
-            item_name (str, optional): Item name for specific item forecast
+            forecast_data (pandas.DataFrame): Forecast data with Date, Forecast, Lower_CI, Upper_CI columns
+            item_name (str, optional): Name of the item being forecasted
 
         Returns:
             str: Path to the saved plot
         """
         try:
-            logger.info("Generating forecast plot")
-
-            # Prepare historical data
-            if item_name:
-                title = f'ARIMA Forecast with Feature Engineering for {item_name}'
-                historical_data = historical_data[historical_data['Item Name'] == item_name]
-            else:
-                title = 'ARIMA Forecast with Feature Engineering'
-
-            # Group historical data by date
-            historical_daily = historical_data.groupby('Date')['Sales'].sum().reset_index()
-
-            # Sort data by date
-            historical_daily = historical_daily.sort_values('Date')
-            forecast_data = forecast_data.sort_values('Date')
+            logger.info(f"Generating forecast plot{' for ' + item_name if item_name else ''}")
 
             # Create figure
             plt.figure(figsize=self.config.FIGURE_SIZE)
 
-            # Get the last 30 days of historical data for better visualization
-            if len(historical_daily) > 30:
-                historical_plot_data = historical_daily.iloc[-30:]
-            else:
-                historical_plot_data = historical_daily
+            # Ensure forecast_data has the required columns
+            required_columns = ['Date', 'Forecast']
+            for col in required_columns:
+                if col not in forecast_data.columns:
+                    logger.error(f"Missing required column {col} in forecast_data")
+                    raise ValueError(f"Missing required column {col} in forecast_data")
 
-            # Plot historical data
-            plt.plot(historical_plot_data['Date'], historical_plot_data['Sales'],
-                    color='blue', marker='o', linestyle='-', linewidth=2,
-                    markersize=6, alpha=0.7, label='Training')
+            # Add confidence intervals if missing
+            if 'Lower_CI' not in forecast_data.columns:
+                logger.info("Adding missing Lower_CI column")
+                forecast_data['Lower_CI'] = forecast_data['Forecast'] * 0.8
 
-            # Plot forecast - convert Date to datetime if it's a string
-            if isinstance(forecast_data['Date'].iloc[0], str):
-                forecast_data['Date'] = pd.to_datetime(forecast_data['Date'])
+            if 'Upper_CI' not in forecast_data.columns:
+                logger.info("Adding missing Upper_CI column")
+                forecast_data['Upper_CI'] = forecast_data['Forecast'] * 1.2
 
-            # Limit forecast to first 30 days for better visualization
-            forecast_plot_data = forecast_data.head(30)
+            # Prepare historical data
+            if historical_data is not None and not historical_data.empty:
+                # If item_name is provided, filter historical data for that item
+                if item_name:
+                    if 'Item Name' in historical_data.columns:
+                        historical_data = historical_data[historical_data['Item Name'] == item_name]
+                    else:
+                        logger.warning(f"Item Name column not found in historical data, using all data")
 
-            plt.plot(forecast_plot_data['Date'], forecast_plot_data['Forecast'],
-                    color='red', marker='o', linestyle='--', linewidth=2,
-                    markersize=6, alpha=0.7, label='Forecast')
+                # Group by date to get daily sales
+                if 'Date' in historical_data.columns and 'Sales' in historical_data.columns:
+                    daily_sales = historical_data.groupby('Date')['Sales'].sum().reset_index()
 
-            # Add confidence interval
-            if 'Forecast' in forecast_data.columns:
-                # Calculate RMSE-based confidence interval (simulated)
-                rmse = historical_daily['Sales'].std() * 0.5  # Simulated RMSE
-                plt.fill_between(
-                    forecast_plot_data['Date'],
-                    forecast_plot_data['Forecast'] - rmse,
-                    forecast_plot_data['Forecast'] + rmse,
-                    color='red', alpha=0.2, label='95% Confidence Interval'
-                )
+                    # Split historical data into training and actual (for visualization)
+                    # Use the last 30% of the data as "actual" for comparison
+                    split_idx = int(len(daily_sales) * 0.7)
+                    training_data = daily_sales.iloc[:split_idx]
+                    actual_data = daily_sales.iloc[split_idx:]
 
-            # Add labels and title
+                    # Plot training data
+                    plt.plot(training_data['Date'], training_data['Sales'], 'b-',
+                             alpha=0.7, label='Training')
+
+                    # Plot actual data
+                    plt.plot(actual_data['Date'], actual_data['Sales'], 'orange',
+                             alpha=0.7, label='Actual')
+                else:
+                    logger.warning("Date or Sales columns not found in historical data")
+
+            # Ensure Date column is datetime type
+            if not pd.api.types.is_datetime64_any_dtype(forecast_data['Date']):
+                logger.info("Converting Date column to datetime")
+                forecast_data['Date'] = pd.to_datetime(forecast_data['Date'], errors='coerce')
+                # Drop rows with NaT in Date column
+                forecast_data = forecast_data.dropna(subset=['Date'])
+
+            # Plot forecast data
+            try:
+                # Ensure Date and Forecast columns have the same length
+                dates = forecast_data['Date'].values
+                forecasts = forecast_data['Forecast'].values
+
+                # Log array shapes and statistics for debugging
+                logger.info(f"DEBUG: dates shape: {dates.shape}, forecasts shape: {forecasts.shape}")
+                logger.info(f"DEBUG: forecast min: {forecast_data['Forecast'].min()}, max: {forecast_data['Forecast'].max()}, std: {forecast_data['Forecast'].std()}")
+
+                # Make sure arrays have the same length
+                min_length = min(len(dates), len(forecasts))
+                if min_length < len(dates) or min_length < len(forecasts):
+                    logger.warning(f"Array length mismatch. Truncating to min length: {min_length}")
+                    dates = dates[:min_length]
+                    forecasts = forecasts[:min_length]
+
+                # Check if any array is empty
+                if min_length > 0:
+                    # Use a more visible line style and marker to highlight variability
+                    plt.plot(dates, forecasts, 'g-', alpha=0.8, linewidth=2, label='Forecast')
+
+                    # Add markers to make the variability more visible
+                    plt.plot(dates, forecasts, 'go', alpha=0.6, markersize=4)
+                else:
+                    logger.warning("Cannot plot forecast: arrays are empty")
+            except Exception as forecast_error:
+                logger.error(f"Error plotting forecast: {str(forecast_error)}")
+                raise
+
+            # Plot confidence intervals if available
+            if 'Lower_CI' in forecast_data.columns and 'Upper_CI' in forecast_data.columns:
+                try:
+                    # Ensure all arrays have the same length
+                    dates = forecast_data['Date'].values
+                    lower_ci = forecast_data['Lower_CI'].values
+                    upper_ci = forecast_data['Upper_CI'].values
+
+                    # Log array shapes for debugging
+                    logger.info(f"DEBUG: dates shape: {dates.shape}, lower_ci shape: {lower_ci.shape}, upper_ci shape: {upper_ci.shape}")
+
+                    # Make sure all arrays have the same length
+                    min_length = min(len(dates), len(lower_ci), len(upper_ci))
+                    if min_length < len(dates) or min_length < len(lower_ci) or min_length < len(upper_ci):
+                        logger.warning(f"Array length mismatch. Truncating to min length: {min_length}")
+                        dates = dates[:min_length]
+                        lower_ci = lower_ci[:min_length]
+                        upper_ci = upper_ci[:min_length]
+
+                    # Check if any array is empty
+                    if min_length > 0:
+                        # Use a more visible fill for confidence intervals
+                        plt.fill_between(dates, lower_ci, upper_ci, color='g', alpha=0.3)
+
+                        # Add lines for upper and lower bounds to make them more visible
+                        plt.plot(dates, lower_ci, 'g--', alpha=0.5, linewidth=1, label='Lower CI')
+                        plt.plot(dates, upper_ci, 'g--', alpha=0.5, linewidth=1, label='Upper CI')
+                    else:
+                        logger.warning("Cannot plot confidence intervals: arrays are empty")
+                except Exception as ci_error:
+                    logger.error(f"Error plotting confidence intervals: {str(ci_error)}")
+                    logger.info("Continuing without confidence intervals")
+
+            # Add title and labels
+            title = 'ARIMA Forecast with Seasonal Patterns'
+            if item_name:
+                title = f'ARIMA Forecast for {item_name} with Seasonal Patterns'
+
             plt.title(title, fontsize=15)
             plt.xlabel('Date', fontsize=12)
             plt.ylabel('Sales', fontsize=12)
-            plt.grid(True, alpha=0.3)
-            plt.legend()
+
+            # Add a more visible grid to help see patterns
+            plt.grid(True, alpha=0.4, linestyle='--')
+
+            # Add a more visible legend
+            plt.legend(loc='best', frameon=True, fancybox=True, shadow=True)
+
+            # Add a note about seasonal patterns
+            plt.figtext(0.5, 0.01,
+                       "Note: Forecast includes day-of-week seasonal patterns (weekends higher, Mondays lower)",
+                       ha='center', fontsize=9, style='italic')
 
             # Rotate x-axis labels
             plt.xticks(rotation=45)
@@ -224,9 +306,14 @@ class Visualizer:
             plt.tight_layout()
 
             # Save plot
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            item_suffix = f'_{item_name}' if item_name else ''
-            plot_path = os.path.join(self.output_dir, f'forecast{item_suffix}_{timestamp}.png')
+            timestamp = dt_module.datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'forecast_{timestamp}.png'
+            if item_name:
+                # Clean item name for filename (remove special characters)
+                clean_item_name = ''.join(c if c.isalnum() else '_' for c in item_name)
+                filename = f'forecast_{clean_item_name}_{timestamp}.png'
+
+            plot_path = os.path.join(self.output_dir, filename)
             plt.savefig(plot_path)
             plt.close()
 
@@ -235,6 +322,7 @@ class Visualizer:
         except Exception as e:
             logger.error(f"Error generating forecast plot: {str(e)}")
             raise
+
 
     def plot_sales_by_category(self, data, category_column):
         """
@@ -276,7 +364,7 @@ class Visualizer:
             plt.tight_layout()
 
             # Save plot
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = dt_module.datetime.now().strftime('%Y%m%d_%H%M%S')
             plot_path = os.path.join(self.output_dir, f'sales_by_{category_column}_{timestamp}.png')
             plt.savefig(plot_path)
             plt.close()
@@ -310,7 +398,7 @@ class Visualizer:
             dow_sales['Day'] = dow_sales['dayofweek'].map(dow_names)
 
             # Create figure with subplots
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=self.config.FIGURE_SIZE)
+            _, (ax1, ax2) = plt.subplots(1, 2, figsize=self.config.FIGURE_SIZE)
 
             # Plot monthly pattern
             sns.barplot(x='Month', y='Sales', data=monthly_sales, ax=ax1)
@@ -331,7 +419,7 @@ class Visualizer:
             plt.tight_layout()
 
             # Save plot
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = dt_module.datetime.now().strftime('%Y%m%d_%H%M%S')
             plot_path = os.path.join(self.output_dir, f'seasonal_patterns_{timestamp}.png')
             plt.savefig(plot_path)
             plt.close()

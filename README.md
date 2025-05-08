@@ -62,13 +62,16 @@ Sales-Automation-Micro/
 ├── logs/                    # Log files
 ├── client.py                # Client script
 ├── main.py                  # Main entry point
+├── streamlit_app.py         # Streamlit UI application
 ├── run.sh                   # Script to run the application
+├── run_streamlit.sh         # Script to run Streamlit UI
 ├── run_tests.sh             # Script to run tests
 ├── requirements.txt         # Python dependencies
 ├── Dockerfile               # Docker configuration
 ├── docker-compose.yml       # Docker Compose configuration
 ├── .gitignore               # Git ignore file
-└── README.md                # Main documentation
+├── README.md                # Main documentation
+└── streamlit_README.md      # Streamlit UI documentation
 ```
 
 ## Installation
@@ -258,12 +261,46 @@ Generates visualizations of sales data and forecasts. It helps users understand 
 
 Manages configuration settings for the entire system. It provides a centralized way to configure the application.
 
+## Streamlit UI
+
+The project includes a Streamlit-based user interface that provides a web-based dashboard for interacting with the Sales Automation Microservice. The UI allows users to:
+
+- Upload sales data files
+- Process data and engineer features
+- Train forecasting models
+- Generate sales forecasts
+- Create visualizations
+- Export results to PDF
+
+### Running the Streamlit UI
+
+You can run the Streamlit UI using the provided script:
+
+```bash
+./run_streamlit.sh
+```
+
+This will:
+
+1. Start the API service if it's not already running
+2. Launch the Streamlit application
+
+Alternatively, you can run the Streamlit application directly:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The Streamlit UI will be available at http://localhost:8501.
+
+For more information about the Streamlit UI, see the [Streamlit UI documentation](streamlit_README.md).
+
 ## Future Enhancements
 
 - Add authentication and authorization
 - Implement real-time data processing
 - Add support for more forecasting models
-- Create a web-based dashboard
+- Enhance the Streamlit UI with more features
 - Implement caching for improved performance
 - Add support for distributed training
 

@@ -27,11 +27,11 @@ def train_model(base_url):
     response = requests.post(f"{base_url}/model/train", json={})
     return response.json()
 
-def generate_forecast(base_url, periods=30, item_name=None):
+def generate_forecast(base_url, periods=30, item_name=None, start_date=None):
     """Generate a forecast using the API"""
     data = {
         'periods': periods,
-        'start_date': datetime.now().isoformat()
+        'start_date': start_date if start_date else datetime.now().isoformat()
     }
 
     if item_name:
@@ -50,11 +50,11 @@ def generate_item_comparison(base_url, items):
     response = requests.post(f"{base_url}/visualization/item_comparison", json={'items': items})
     return response.json()
 
-def generate_forecast_plot(base_url, periods=30, item_name=None):
+def generate_forecast_plot(base_url, periods=30, item_name=None, start_date=None):
     """Generate a forecast visualization using the API"""
     data = {
         'periods': periods,
-        'start_date': datetime.now().isoformat()
+        'start_date': start_date if start_date else datetime.now().isoformat()
     }
 
     if item_name:
@@ -72,6 +72,7 @@ def main():
         'sales_trend', 'item_comparison', 'forecast_plot'
     ], help='Action to perform')
     parser.add_argument('--periods', type=int, default=30, help='Number of periods to forecast')
+    parser.add_argument('--start-date', help='Start date for forecasting (format: YYYY-MM-DD)')
     parser.add_argument('--item', help='Item name for item-specific actions')
     parser.add_argument('--items', nargs='+', help='List of items for comparison')
 
@@ -86,7 +87,7 @@ def main():
     elif args.action == 'train':
         result = train_model(args.url)
     elif args.action == 'forecast':
-        result = generate_forecast(args.url, args.periods, args.item)
+        result = generate_forecast(args.url, args.periods, args.item, args.start_date)
     elif args.action == 'sales_trend':
         result = generate_sales_trend(args.url)
     elif args.action == 'item_comparison':
@@ -94,7 +95,7 @@ def main():
             parser.error("--items is required for item_comparison action")
         result = generate_item_comparison(args.url, args.items)
     elif args.action == 'forecast_plot':
-        result = generate_forecast_plot(args.url, args.periods, args.item)
+        result = generate_forecast_plot(args.url, args.periods, args.item, args.start_date)
 
     print(json.dumps(result, indent=2))
 

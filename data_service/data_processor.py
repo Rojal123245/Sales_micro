@@ -133,6 +133,13 @@ class DataProcessor:
         try:
             logger.info("Preparing time series data")
 
+            # Ensure Date column is datetime type and has no NaT values
+            if not pd.api.types.is_datetime64_any_dtype(data['Date']):
+                data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+
+            # Drop rows with NaT in Date column
+            data = data.dropna(subset=['Date'])
+
             # Sort by date
             data = data.sort_values('Date')
 
@@ -169,6 +176,12 @@ class DataProcessor:
 
             # Fill any missing values
             daily_data = daily_data.fillna(method='ffill').fillna(method='bfill').fillna(0)
+
+            # Ensure all numeric columns have proper data types
+            numeric_columns = daily_data.select_dtypes(include=['float', 'int']).columns
+            for col in numeric_columns:
+                daily_data[col] = pd.to_numeric(daily_data[col], errors='coerce')
+                daily_data[col] = daily_data[col].fillna(0)
 
             # Split into train and test
             train_size = int(len(daily_data) * self.config.TRAIN_TEST_SPLIT)

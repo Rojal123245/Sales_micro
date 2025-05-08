@@ -218,13 +218,31 @@ def train_model():
             if test_forecast['Forecast'].sum() == 0:
                 logger.warning("Test forecast is all zeros, model may need adjustment")
 
+            # Create a copy for JSON serialization
+            test_forecast_copy = test_forecast.copy()
+            # Convert datetime objects to strings and handle NaT values
+            if 'Date' in test_forecast_copy.columns:
+                # Replace NaT values with actual dates
+                if test_forecast_copy['Date'].isna().any():
+                    # Find the first valid date
+                    first_valid_date = test_forecast_copy['Date'].dropna().iloc[0] if not test_forecast_copy['Date'].dropna().empty else pd.Timestamp.now()
+
+                    # Create a date range starting from the first valid date
+                    date_range = pd.date_range(start=first_valid_date, periods=len(test_forecast_copy))
+
+                    # Replace the Date column with the new date range
+                    test_forecast_copy['Date'] = date_range
+
+                # Convert to string format
+                test_forecast_copy['Date'] = test_forecast_copy['Date'].dt.strftime('%Y-%m-%d')
+
             return jsonify({
                 'status': 'success',
                 'message': f'Model trained successfully with optimal ARIMA order {best_order}',
                 'metrics': metrics,
                 'model_path': model_path,
                 'arima_order': best_order,
-                'test_forecast': test_forecast.to_dict(orient='records')
+                'test_forecast': test_forecast_copy.to_dict(orient='records')
             })
         except Exception as model_error:
             logger.error(f"Error in model training/evaluation: {str(model_error)}")

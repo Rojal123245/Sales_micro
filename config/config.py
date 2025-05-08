@@ -16,7 +16,7 @@ ARIMA_ORDER = (2, 1, 2)
 
 # API settings
 API_HOST = os.environ.get('API_HOST', '0.0.0.0')
-API_PORT = int(os.environ.get('API_PORT', 8084))
+API_PORT = int(os.environ.get('API_PORT', 8085))
 DEBUG_MODE = os.environ.get('DEBUG_MODE', 'True').lower() == 'true'
 
 # Feature engineering settings

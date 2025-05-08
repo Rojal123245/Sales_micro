@@ -286,14 +286,31 @@ class ModelPredictor:
             if start_date is None:
                 # Use the last date in the historical data + 1 day instead of current date
                 if historical_data is not None and 'Date' in historical_data.columns:
-                    last_date = historical_data['Date'].max()
-                    start_date = last_date + pd.Timedelta(days=1)
-                    logger.info(f"Using day after last historical date as start date: {start_date}")
+                    try:
+                        # Make sure we have a valid datetime
+                        last_date = historical_data['Date'].max()
+
+                        # Check if last_date is NaT
+                        if pd.isna(last_date):
+                            logger.warning("Last date in historical data is NaT, using current date instead")
+                            start_date = datetime.now()
+                        else:
+                            # Convert pandas Timestamp to Python datetime if needed
+                            if not isinstance(last_date, datetime):
+                                last_date = last_date.to_pydatetime()
+
+                            start_date = last_date + pd.Timedelta(days=1)
+
+                        logger.info(f"Using day after last historical date as start date: {start_date}")
+                    except Exception as e:
+                        logger.warning(f"Error determining start date from historical data: {str(e)}")
+                        start_date = datetime.now()
+                        logger.info(f"Falling back to current date as start date: {start_date}")
                 else:
                     start_date = datetime.now()
                     logger.info(f"Using current date as start date: {start_date}")
 
-            # Ensure start_date is a datetime object
+            # Ensure start_date is a Python datetime object (not pandas Timestamp)
             if not isinstance(start_date, datetime):
                 try:
                     if isinstance(start_date, str):
@@ -305,6 +322,9 @@ class ModelPredictor:
                     if pd.isna(start_date):
                         logger.warning("Invalid start_date provided, using current date instead")
                         start_date = datetime.now()
+                    else:
+                        # Convert pandas Timestamp to Python datetime
+                        start_date = start_date.to_pydatetime()
                 except Exception as e:
                     logger.warning(f"Error converting start_date: {str(e)}, using current date instead")
                     start_date = datetime.now()
@@ -337,8 +357,12 @@ class ModelPredictor:
                 forecast_values = np.array([self.model.forecast(steps=1)[0] for _ in range(periods)])
 
             # Create result dataframe with only the requested number of periods
+            # Generate dates for all forecast periods starting from start_date
+            forecast_dates = pd.date_range(start=start_date, periods=periods)
+
+            # Create the result DataFrame
             result = pd.DataFrame({
-                'Date': forecast_features['Date'].iloc[:periods],  # Keep as datetime object
+                'Date': forecast_dates,  # Use generated date range
                 'Forecast': forecast_values[:periods]
             })
 
@@ -647,10 +671,26 @@ class ModelPredictor:
 
             # Set start date if not provided
             if start_date is None:
-                # Use the last date in the item data + 1 day
-                last_date = item_data['Date'].max()
-                start_date = last_date + pd.Timedelta(days=1)
-                logger.info(f"Using day after last item date as start date: {start_date}")
+                try:
+                    # Use the last date in the item data + 1 day
+                    last_date = item_data['Date'].max()
+
+                    # Check if last_date is NaT
+                    if pd.isna(last_date):
+                        logger.warning(f"Last date for item '{item_name}' is NaT, using current date instead")
+                        start_date = datetime.now()
+                    else:
+                        # Convert pandas Timestamp to Python datetime if needed
+                        if not isinstance(last_date, datetime):
+                            last_date = last_date.to_pydatetime()
+
+                        start_date = last_date + pd.Timedelta(days=1)
+
+                    logger.info(f"Using day after last item date as start date: {start_date}")
+                except Exception as e:
+                    logger.warning(f"Error determining start date for item '{item_name}': {str(e)}")
+                    start_date = datetime.now()
+                    logger.info(f"Falling back to current date as start date: {start_date}")
 
             # Generate forecast
             logger.info(f"DEBUG: Calling self.forecast with periods={periods}, start_date={start_date}")

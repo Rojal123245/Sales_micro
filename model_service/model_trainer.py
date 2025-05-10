@@ -96,15 +96,19 @@ class ModelTrainer:
                 order, _ = self.grid_search_arima(train_data, p_values, d_values, q_values)
 
             # Train the model
-            try:
-                # First try without trend
-                model = ARIMA(endog=train_data, exog=exog_variables, order=order, trend='n')
-                model_fit = model.fit()
-            except Exception as e:
-                logger.warning(f"Error training ARIMA with no trend: {str(e)}")
-                # If that fails, try with default trend
-                model = ARIMA(endog=train_data, exog=exog_variables, order=order)
-                model_fit = model.fit()
+            logger.info(f"-------- Training ARIMA with order {order}")
+            # try:
+            #     # First try without trend
+            #     model = ARIMA(endog=train_data, exog=exog_variables, order=order, trend='n')
+            #     model_fit = model.fit()
+            # except Exception as e:
+            #     logger.warning(f"Error training ARIMA with no trend: {str(e)}")
+            #     # If that fails, try with default trend
+            #     model = ARIMA(endog=train_data, exog=exog_variables, order=order)
+            #     model_fit = model.fit()
+            model = ARIMA(endog=train_data, exog=exog_variables, order=order)
+            model_fit = model.fit()
+
 
             logger.info("ARIMA model trained successfully")
             return model_fit
@@ -112,27 +116,31 @@ class ModelTrainer:
             logger.error(f"Error training ARIMA model: {str(e)}")
             raise
 
-    def evaluate_model(self, model, test_data, exog_variables=None):
+    def evaluate_model(self, model, test_data, X_test=None, y_test=None):
         """
         Evaluate the trained model
 
         Args:
             model: Trained model
             test_data (pandas.Series): Test data
-            exog_variables (pandas.DataFrame, optional): Exogenous variables
+            X_test (pandas.DataFrame, optional): Test exogenous variables
+            y_test (pandas.Series, optional): Test target values
 
         Returns:
             dict: Evaluation metrics
         """
         try:
             logger.info("Evaluating model")
+            logger.info(f"test_data shape: {test_data.shape}")
+            logger.info(f"X_test shape: {X_test.shape}")
+            logger.info(f"y_test shape: {y_test.shape}")
 
             # Generate forecasts
-            forecast = model.forecast(steps=len(test_data), exog=exog_variables)
+            forecast = model.forecast(steps=len(test_data), exog=X_test)
 
             # Calculate metrics
-            rmse = np.sqrt(mean_squared_error(test_data, forecast))
-            mae = mean_absolute_error(test_data, forecast)
+            mae = mean_absolute_error(y_test, forecast)
+            rmse = np.sqrt(mean_squared_error(y_test, forecast))
 
             metrics = {
                 'rmse': rmse,

@@ -20,6 +20,9 @@ from model_service.model_trainer import ModelTrainer
 from model_service.model_predictor import ModelPredictor
 from visualization_service.visualizer import Visualizer
 
+import warnings
+warnings.filterwarnings("ignore")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -106,13 +109,6 @@ def train_model():
         # Engineer features
         processed_data = data_processor.engineer_features(data)
 
-        # Ensure Date column is datetime type and has no NaT values
-        if not pd.api.types.is_datetime64_any_dtype(processed_data['Date']):
-            processed_data['Date'] = pd.to_datetime(processed_data['Date'], errors='coerce')
-
-        # Drop rows with NaT in Date column
-        processed_data = processed_data.dropna(subset=['Date'])
-
         if len(processed_data) == 0:
             return jsonify({
                 'status': 'error',
@@ -122,9 +118,11 @@ def train_model():
         # Prepare time series data
         train_data, test_data = data_processor.prepare_time_series_data(processed_data)
 
+        logger.info(f"Train data columns: {train_data.columns.tolist()}")
+
         # Define exogenous variables for ARIMA model
         exog_features = [
-            'dayofweek', 'Month', 'quarter', 'is_weekend',
+            'dayofweek', 'Month', 'quarter', 'is_weekend', 'price_bins',
             'stock_ratio', 'sales_ratio', 'sales_lag1', 'sales_lag7',
             'sales_ma_7d', 'sales_ma_30d', 'price_stock_ratio',
             'sales_price_ratio', 'month_sin', 'month_cos',
@@ -154,14 +152,23 @@ def train_model():
                 q_values
             )
 
+            X_train = train_data[available_features]
+            X_test = test_data[available_features]
+            y_train = train_data['Sales']
+            y_test = test_data['Sales']
+
             if best_model is None:
                 logger.warning("Grid search failed to find a suitable model, using default parameters")
                 best_order = config.ARIMA_ORDER
 
                 # Train model with exogenous variables using default parameters
+                # model = model_trainer.train_arima_model(
+                #     train_data['Sales'],
+                #     train_data[available_features]
+                # )
                 model = model_trainer.train_arima_model(
-                    train_data['Sales'],
-                    train_data[available_features]
+                    y_train,
+                    X_train
                 )
             else:
                 logger.info(f"Grid search found optimal ARIMA order: {best_order}")
@@ -171,19 +178,29 @@ def train_model():
                 original_order = config.ARIMA_ORDER
                 config.ARIMA_ORDER = best_order
 
+                # model = model_trainer.train_arima_model(
+                #     train_data['Sales'],
+                #     train_data[available_features]
+                # )
                 model = model_trainer.train_arima_model(
-                    train_data['Sales'],
-                    train_data[available_features]
+                    y_train,
+                    X_train
                 )
 
                 # Restore original order
                 config.ARIMA_ORDER = original_order
 
             # Evaluate model with exogenous variables
+            # metrics, _ = model_trainer.evaluate_model(
+            #     model,
+            #     test_data['Sales'],
+            #     test_data[available_features]
+            # )
             metrics, _ = model_trainer.evaluate_model(
                 model,
-                test_data['Sales'],
-                test_data[available_features]
+                test_data,
+                X_test,
+                y_test
             )
 
             # Ensure metrics are numeric values

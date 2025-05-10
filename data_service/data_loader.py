@@ -56,9 +56,9 @@ class DataLoader:
         """
         try:
             logger.info("Processing date columns")
-            
             # Convert Date column to datetime
-            data['Date'] = pd.to_datetime(data['Date'])
+            data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+            data = data.dropna(subset=['Date'])
             
             # Extract date components
             data['Year'] = data['Date'].dt.year

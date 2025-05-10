@@ -12,7 +12,7 @@ DATA_PATH = os.path.join(DATA_DIR, DATA_FILE)
 # Model parameters
 TRAIN_TEST_SPLIT = 0.8
 RANDOM_STATE = 42
-ARIMA_ORDER = (2, 1, 2)
+ARIMA_ORDER = (1, 0, 0)
 
 # API settings
 API_HOST = os.environ.get('API_HOST', '0.0.0.0')

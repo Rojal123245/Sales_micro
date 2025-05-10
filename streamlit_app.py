@@ -33,7 +33,7 @@ st.set_page_config(
 )
 
 # API base URL
-API_BASE_URL = "http://0.0.0.0:8084"
+API_BASE_URL = "http://0.0.0.0:8085"
 print(f"Connecting to API at {API_BASE_URL}")
 
 # Function to check API health

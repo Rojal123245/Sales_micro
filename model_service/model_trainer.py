@@ -133,7 +133,6 @@ class ModelTrainer:
             logger.info("Evaluating model")
             logger.info(f"test_data shape: {test_data.shape}")
             logger.info(f"X_test shape: {X_test.shape}")
-            logger.info(f"y_test shape: {y_test.shape}")
 
             # Generate forecasts
             forecast = model.forecast(steps=len(test_data), exog=X_test)

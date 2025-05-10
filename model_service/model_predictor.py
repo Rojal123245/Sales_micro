@@ -334,7 +334,7 @@ class ModelPredictor:
 
             # Define exogenous variables for ARIMA model
             exog_features = [
-                'dayofweek', 'Month', 'quarter', 'is_weekend',
+                'dayofweek', 'Month', 'quarter', 'is_weekend', 'price_bins',
                 'stock_ratio', 'sales_ratio', 'sales_lag1', 'sales_lag7',
                 'sales_ma_7d', 'sales_ma_30d', 'price_stock_ratio',
                 'sales_price_ratio', 'month_sin', 'month_cos',
@@ -343,6 +343,10 @@ class ModelPredictor:
 
             # Filter features that exist in the data
             available_features = [f for f in exog_features if f in forecast_features.columns]
+            available_features = ['dayofweek', 'Month', 'quarter', 'is_weekend', 
+                                  'price_bins', 'stock_ratio', 'sales_ratio', 'sales_lag1', 
+                                  'sales_lag7', 'sales_ma_7d', 'sales_ma_30d', 'price_stock_ratio', 
+                                  'sales_price_ratio']
 
             # Select features for the model
             X_forecast = forecast_features[available_features]
